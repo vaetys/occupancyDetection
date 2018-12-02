@@ -8,6 +8,8 @@ from keras.layers import Input, Dense
 from keras import optimizers
 from time import strptime, strftime, mktime, gmtime
 import random
+from sklearn import preprocessing
+
 
 def datetime_converter(datetime_string):
     # (1) Convert to datetime format
@@ -25,11 +27,13 @@ def datetime_converter(datetime_string):
 #----------------------------------------------------------------
 trainDataPath = '../data/occupancy_data/datatrainingRan.txt'
 testDataPath = '../data/occupancy_data/datatestRan.txt'
+testData2Path = '../data/occupancy_data/datatest2.txt'
 #----------------------------------------------------------------
 
 def loadData(path):
-    data = np.genfromtxt(path, dtype=float, delimiter=',', skip_header=0, encoding=None, usecols = (1, 4))
-    data[:,0] = getTimes(path)
+    data = np.genfromtxt(path, dtype=float, delimiter=',', skip_header=0, encoding=None, usecols = (1, 2, 3, 4, 5))
+    data[:, 0] = getTimes(path)
+    data = normalize(data)
     return data
 
 #Returns a spearate vector out of the last column of the given 2 dimensional numpy array.
@@ -38,36 +42,42 @@ def getLabels(path):
     
 def getTimes(path):
     timevector = np.genfromtxt(path, dtype=None, delimiter=',', skip_header=0, encoding=None, usecols=(1))
+    print('!!!Time conversion happening!!!')
     epochvector = []
     for val in timevector:
-        time = int(val[12:-7])
-        print(time)
+        try:
+            time = int(val[12:-7])
+        except ValueError:
+            time = int(val[11:-6])
+       # print(time)
         epochvector.append(time)
     numpyepochs = np.array(epochvector)    
     return numpyepochs
 
+def normalize(x):
 
+    return x / x.max(axis=0)
 
 #------------------------------KERAS PART
 
 traindata = loadData(trainDataPath)
 testdata = loadData(testDataPath)
+testdata2 = loadData(testData2Path)
 trainlabels = getLabels(trainDataPath)
 testlabels = getLabels(testDataPath)
-
-print(traindata[1], traindata[500])
-
+testlabels2 = getLabels(testData2Path)
 
 
+print(traindata[1],traindata[2], traindata[3], traindata[4],traindata[5],traindata[6])
 
-inputs = Input(shape=(2,))
+
+inputs = Input(shape=(5,))
 x = Dense(8, activation='tanh')(inputs)
-y = Dense(20, activation='tanh')(x)
-outputs = Dense(1, activation='sigmoid')(y)
+outputs = Dense(1, activation='sigmoid')(x)
 
 model = Model(inputs=inputs, outputs=outputs)
 
-model.compile(optimizer=optimizers.SGD(lr=0.001, momentum=0.0, decay=0.0, nesterov=False),
+model.compile(optimizer=optimizers.adam(lr=0.002),
               loss='binary_crossentropy',
               metrics=['accuracy'])
 
@@ -75,6 +85,7 @@ print(model.summary())
 
 model.fit(traindata, trainlabels, validation_data=(testdata, testlabels), epochs=10, batch_size=1)
 
-print(model.evaluate(testdata, testlabels, batch_size=128))
+print('TEST DATA 1', model.evaluate(testdata, testlabels, batch_size=16))
+print('TEST DATA 2', model.evaluate(testdata2, testlabels2, batch_size=16))
 
 
