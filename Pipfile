@@ -10,6 +10,7 @@ tensorflow = "*"
 numpy = "*"
 keras = "*"
 sklearn = "*"
+cloudant = "*"
 
 [requires]
 python_version = "3.6"

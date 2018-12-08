@@ -9,39 +9,47 @@ from keras import optimizers
 from time import strptime, strftime, mktime, gmtime
 import random
 from sklearn import preprocessing
+from cloudant import couchdb
+import json
+import dbconnection as db
 
 
-def datetime_converter(datetime_string):
-    # (1) Convert to datetime format
-    target_timestamp = strptime(datetime_string, '%Y-%m-%d %H:%M:%S')
+def loadDataFromJson(docs):
+   # data = json.loads(docs
+    dataArray = jsonToMatrix(docs)
+    return dataArray
 
-    # (2) mktime creates epoch time from the local time
-    mktime_epoch = mktime(target_timestamp)
-    #print(int(mktime_epoch)) # convert to integer to remove decimal
+def jsonToMatrix(docs):
+    matrix = []
+    for doc in docs['docs']:
+        row = []
+        for key in doc:
+            row.append(doc[key])
+        matrix.append(row)
+    return matrix
 
-    # (3) gmtime to convert epoch time into UTC time object
-    epoch_to_timestamp = strftime('%Y-%m-%d %H:%M:%S', gmtime(mktime_epoch))
-    #print(epoch_to_timestamp)
-    return int(mktime_epoch)
 
-#----------------------------------------------------------------
-trainDataPath = '../data/occupancy_data/datatrainingRan.txt'
-testDataPath = '../data/occupancy_data/datatestRan.txt'
-testData2Path = '../data/occupancy_data/datatest2.txt'
-#----------------------------------------------------------------
-
-def loadData(path):
-    data = np.genfromtxt(path, dtype=float, delimiter=',', skip_header=0, encoding=None, usecols = (1, 2, 3, 4, 5))
-    data[:, 0] = getTimes(path)
+#Loads the data from a text file and returns a ready-to-use numpy-array
+def loadData(dbname):
+    arrayData = loadDataFromJson(db.fetchAll(dbname))
+    data = np.array(arrayData)
+    data = np.array(data[:, [4,5,6,7,8]], dtype=float) #the chosen indices determine what features to use
+    np.append(getTimes(dbname), data, axis=1) #
     data = normalize(data)
     return data
 
+
 #Returns a spearate vector out of the last column of the given 2 dimensional numpy array.
-def getLabels(path):
-    return np.genfromtxt(path, dtype=int, delimiter=',', skip_header=0, encoding=None, usecols = (7))
+def getLabels(dbname):
+    labelData = db.fetchLabels(dbname) #use dbname
+    data = np.array(labelData)
+    print(data)
+    print(data[0])
+    return data
     
-def getTimes(path):
-    timevector = np.genfromtxt(path, dtype=None, delimiter=',', skip_header=0, encoding=None, usecols=(1))
+def getTimes(dbname):
+    timevector = db.fetchTimes(dbname)
+    a = len(timevector)
     print('!!!Time conversion happening!!!')
     epochvector = []
     for val in timevector:
@@ -52,24 +60,19 @@ def getTimes(path):
        # print(time)
         epochvector.append(time)
     numpyepochs = np.array(epochvector)    
-    return numpyepochs
+    return numpyepochs.reshape(a, 1)
 
+
+#Returns the normalized version of data
 def normalize(x):
-
     return x / x.max(axis=0)
 
-#------------------------------KERAS PART
-
-traindata = loadData(trainDataPath)
-testdata = loadData(testDataPath)
-testdata2 = loadData(testData2Path)
-trainlabels = getLabels(trainDataPath)
-testlabels = getLabels(testDataPath)
-testlabels2 = getLabels(testData2Path)
-
-
-print(traindata[1],traindata[2], traindata[3], traindata[4],traindata[5],traindata[6])
-
+traindata = loadData('occupancytraining')
+testdata = loadData('occupancytest1')
+testdata2 = loadData('occupancytest2')
+trainlabels = getLabels('occupancytraining')
+testlabels = getLabels('occupancytest1')
+testlabels2 = getLabels('occupancytest2')
 
 inputs = Input(shape=(5,))
 x = Dense(8, activation='tanh')(inputs)
@@ -80,10 +83,9 @@ model = Model(inputs=inputs, outputs=outputs)
 model.compile(optimizer=optimizers.adam(lr=0.002),
               loss='binary_crossentropy',
               metrics=['accuracy'])
-
 print(model.summary())
 
-model.fit(traindata, trainlabels, validation_data=(testdata, testlabels), epochs=10, batch_size=1)
+model.fit(traindata, trainlabels, validation_data=(testdata, testlabels), epochs=10, batch_size=32)
 
 print('TEST DATA 1', model.evaluate(testdata, testlabels, batch_size=16))
 print('TEST DATA 2', model.evaluate(testdata2, testlabels2, batch_size=16))
