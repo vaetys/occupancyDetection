@@ -11,7 +11,7 @@ def openCouchSession():
     # Perform library operations within this context.  Such as:
         print(client.all_dbs()) 
 
-
+#Gets all documents from the given database
 def fetchAll(dbname):
     with couchdb('admin', 'isthisroomoccupied', url='http://127.0.0.1:5984/') as client:
         my_database = client[dbname]
@@ -20,7 +20,7 @@ def fetchAll(dbname):
             docs['docs'].append(document)
         return docs
 
-
+#gets the values from the corresponding values for the key 'Occupancy' of the given database
 def fetchLabels(dbname):
     with couchdb('admin', 'isthisroomoccupied', url='http://127.0.0.1:5984/') as client:
         db = client[dbname]
@@ -29,6 +29,7 @@ def fetchLabels(dbname):
             docs.append(document['Occupancy'])
         return docs
 
+#Gets the 'values' from the given database
 def fetchTimes(dbname):
     with couchdb('admin', 'isthisroomoccupied', url='http://127.0.0.1:5984/') as client:
         db = client[dbname]

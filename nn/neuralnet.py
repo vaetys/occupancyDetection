@@ -13,12 +13,8 @@ from cloudant import couchdb
 import json
 import dbconnection as db
 
-
-def loadDataFromJson(docs):
-   # data = json.loads(docs
-    dataArray = jsonToMatrix(docs)
-    return dataArray
-
+#converts a given json dictinoary to a matrix. Json dict must contain a json-
+#array called 'docs'
 def jsonToMatrix(docs):
     matrix = []
     for doc in docs['docs']:
@@ -31,7 +27,7 @@ def jsonToMatrix(docs):
 
 #Loads the data from a text file and returns a ready-to-use numpy-array
 def loadData(dbname):
-    arrayData = loadDataFromJson(db.fetchAll(dbname))
+    arrayData = jsonToMatrix(db.fetchAll(dbname))
     data = np.array(arrayData)
     data = np.array(data[:, [4,5,6,7,8]], dtype=float) #the chosen indices determine what features to use
     np.append(getTimes(dbname), data, axis=1) #
@@ -41,25 +37,23 @@ def loadData(dbname):
 
 #Returns a spearate vector out of the last column of the given 2 dimensional numpy array.
 def getLabels(dbname):
-    labelData = db.fetchLabels(dbname) #use dbname
+    labelData = db.fetchLabels(dbname) 
     data = np.array(labelData)
-    print(data)
-    print(data[0])
     return data
-    
+
+#returns the hour-value for the dates in a given database name.
 def getTimes(dbname):
     timevector = db.fetchTimes(dbname)
     a = len(timevector)
     print('!!!Time conversion happening!!!')
-    epochvector = []
+    hourvector = []
     for val in timevector:
         try:
             time = int(val[12:-7])
         except ValueError:
             time = int(val[11:-6])
-       # print(time)
-        epochvector.append(time)
-    numpyepochs = np.array(epochvector)    
+        hourvector.append(time)
+    numpyepochs = np.array(hourvector)    
     return numpyepochs.reshape(a, 1)
 
 
