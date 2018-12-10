@@ -6,8 +6,6 @@ import filecmp
 from keras.models import Model
 from keras.layers import Input, Dense
 from keras import optimizers
-from time import strptime, strftime, mktime, gmtime
-import random
 from sklearn import preprocessing
 from cloudant import couchdb
 import json
@@ -45,7 +43,6 @@ def getLabels(dbname):
 def getTimes(dbname):
     timevector = db.fetchTimes(dbname)
     a = len(timevector)
-    print('!!!Time conversion happening!!!')
     hourvector = []
     for val in timevector:
         try:
@@ -81,7 +78,7 @@ print(model.summary())
 
 model.fit(traindata, trainlabels, validation_data=(testdata, testlabels), epochs=10, batch_size=32)
 
-print('TEST DATA 1', model.evaluate(testdata, testlabels, batch_size=16))
-print('TEST DATA 2', model.evaluate(testdata2, testlabels2, batch_size=16))
+print('Validation Data Accuracy :', model.evaluate(testdata, testlabels, batch_size=16))
+print('Test Data 2 Accuracy     :', model.evaluate(testdata2, testlabels2, batch_size=16))
 
 
